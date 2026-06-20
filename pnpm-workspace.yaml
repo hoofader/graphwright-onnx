@@ -1,11 +1,18 @@
+# Build-script allowlist. Only the deps listed here may run install
+# scripts; everything else is blocked without a build. graphwright is a
+# git dep whose `prepare` (tsc) builds its dist at install time. The
+# native deps (onnxruntime-node, sharp, protobufjs) are deliberately left
+# out — only the gated real-inference integration test loads them, so the
+# default install/typecheck/lint/test/build never needs them.
+onlyBuiltDependencies:
+  - esbuild
+  - graphwright
+
+# pnpm 11 prompts via allowBuilds when unactioned; the explicit values
+# below answer the prompt so `pnpm install` returns exit 0 in CI and dev.
 allowBuilds:
   esbuild: true
-  # The git-hosted graphwright runs `prepare` (tsc) to produce its dist.
   graphwright: true
-  # Native runtime deps of gliner / transformers.js. Only the gated
-  # real-inference integration test loads them, so their build scripts
-  # are off for lint/typecheck/unit/build. Enable onnxruntime-node to run
-  # that test against a model.
   onnxruntime-node: false
   sharp: false
   protobufjs: false
