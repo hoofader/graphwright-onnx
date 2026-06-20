@@ -1,0 +1,11 @@
+allowBuilds:
+  esbuild: true
+  # The git-hosted graphwright runs `prepare` (tsc) to produce its dist.
+  graphwright: true
+  # Native runtime deps of gliner / transformers.js. Only the gated
+  # real-inference integration test loads them, so their build scripts
+  # are off for lint/typecheck/unit/build. Enable onnxruntime-node to run
+  # that test against a model.
+  onnxruntime-node: false
+  sharp: false
+  protobufjs: false

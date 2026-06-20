@@ -1,0 +1,65 @@
+{
+  "name": "graphwright-onnx",
+  "version": "0.1.0",
+  "description": "No-LLM entity extraction for graphwright: a GLiNER (zero-shot NER) ONNX backend that produces graphwright's ExtractedEntities. The deterministic fallback when no LLM is available.",
+  "license": "Apache-2.0",
+  "author": "Hoofader",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoofader/graphwright-onnx.git"
+  },
+  "keywords": [
+    "graphwright",
+    "gliner",
+    "ner",
+    "entity-extraction",
+    "onnx",
+    "zero-shot",
+    "no-llm"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "tsc -p tsconfig.build.json",
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "gliner": "^0.0.19"
+  },
+  "peerDependencies": {
+    "graphwright": "*",
+    "onnxruntime-node": "^1.19.0"
+  },
+  "peerDependenciesMeta": {
+    "onnxruntime-node": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.19.20",
+    "eslint": "^9.18.0",
+    "graphwright": "git+https://github.com/hoofader/graphwright.git#main",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}
