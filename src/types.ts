@@ -33,3 +33,23 @@ export type GlinerInference = (input: {
  * scope which of GLiNER's zero-shot guesses survive.
  */
 export type LabelMap = Record<string, ExtractionKind>;
+
+/** One classification: a candidate label and its probability in [0, 1]. */
+export interface Classification {
+  label: string;
+  score: number;
+}
+
+/**
+ * The classification seam (GLiNER2 only): text + candidate labels → a
+ * label→score map. With `multiLabel` the runtime returns every label
+ * above `threshold`; otherwise the single best. Tests inject a fake; a
+ * host can inject a shared GLiNER2 runtime so one loaded model serves
+ * both extraction and classification.
+ */
+export type GlinerClassification = (input: {
+  text: string;
+  labels: string[];
+  multiLabel?: boolean;
+  threshold?: number;
+}) => Promise<Record<string, number>>;

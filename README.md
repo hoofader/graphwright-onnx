@@ -55,6 +55,27 @@ new GlinerExtractor({
 
 A label absent from the map is dropped.
 
+## Classification
+
+GLiNER2 adds zero-shot text classification alongside NER. `GlinerClassifier` scores a text against a set of candidate labels, which is how you label the relationship or connection-context a diary line is about (`family` / `work` / `romantic` / …). Attach the result to the edges graphwright proposes; the classifier proposes, the host disposes.
+
+It needs a GLiNER2 model (the GLiNER1 models above do not classify):
+
+```ts
+import { GlinerClassifier, DEFAULT_CONNECTION_CONTEXTS } from 'graphwright-onnx';
+
+const clf = new GlinerClassifier({
+  modelId: 'lmo3/gliner2-multi-v1-onnx',
+  labels: DEFAULT_CONNECTION_CONTEXTS, // or your own taxonomy
+});
+await clf.initialize();
+
+await clf.classify('I had coffee with my sister');
+// → [{ label: 'family', score: 0.91 }]  (ranked most likely first)
+```
+
+Single-label (the default) returns the best guess; pass `{ multiLabel: true, threshold: 0.3 }` to get every label the model keeps above the floor. Empty text returns `[]` without loading the model. The labels are yours: `DEFAULT_CONNECTION_CONTEXTS` is only a starting point. Like the extractor, the classification step is injectable (`{ classification }`) to test without a model or to reuse one loaded GLiNER2 runtime for both NER and classification.
+
 ## Notes
 
 - Span offsets are character positions, equal to JS UTF-16 code units across the Basic Multilingual Plane (Latin and Persian align). Astral-plane input would need re-indexing.

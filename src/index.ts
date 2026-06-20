@@ -7,6 +7,10 @@
 
 export { GlinerExtractor } from './extractor.js';
 export type { GlinerExtractorConfig } from './extractor.js';
+export { GlinerClassifier } from './classifier.js';
+export type { GlinerClassifierConfig } from './classifier.js';
 export { toExtractedEntities } from './map.js';
+export { toClassifications } from './classify-map.js';
 export { DEFAULT_LABEL_MAP, labelsFor } from './label-map.js';
-export type { GlinerEntity, GlinerInference, LabelMap } from './types.js';
+export { DEFAULT_CONNECTION_CONTEXTS } from './contexts.js';
+export type { Classification, GlinerClassification, GlinerEntity, GlinerInference, LabelMap } from './types.js';
