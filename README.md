@@ -7,19 +7,18 @@ It is a separate package on purpose. graphwright's core has zero runtime depende
 ## Install
 
 ```bash
-pnpm add graphwright-onnx graphwright onnxruntime-node
+pnpm add graphwright-onnx graphwright @lmoe/gliner-onnx
 ```
 
-`graphwright` and `onnxruntime-node` are peer dependencies. `onnxruntime-node` is only needed to run a real model — code that injects its own inference (tests, a shared model) can skip it.
+`graphwright` is a peer dependency. `@lmoe/gliner-onnx` is the default GLiNER backend (it runs in Node via onnxruntime-node); install it to use the built-in extractor, or inject your own inference and skip it. It pulls a transformers.js runtime, so it is not a dependency of this package — the default install stays light.
 
 ## Model
 
-GLiNER is zero-shot: you hand it labels and it scores spans against them. You supply the ONNX model file and a tokenizer:
+GLiNER is zero-shot: you hand it labels and it scores spans against them. Point at a GLiNER (v1 / v2.1) ONNX model on the Hugging Face hub by id; the backend downloads the model + tokenizer on first use and caches them:
 
-- Pre-converted models: [onnx-community on Hugging Face](https://huggingface.co/onnx-community?search_models=gliner) (e.g. `onnx-community/gliner_small-v2.1`).
-- Or convert one with GLiNER's [`convert_to_onnx.py`](https://github.com/urchade/GLiNER/blob/main/convert_to_onnx.py).
+- [onnx-community GLiNER models](https://huggingface.co/onnx-community?search_models=gliner), e.g. `onnx-community/gliner_small-v2.1`.
 
-Nothing is bundled — the model is the host's to fetch and keep.
+Nothing is bundled — the model is fetched on demand.
 
 ## Use
 
@@ -28,9 +27,7 @@ import { GlinerExtractor } from 'graphwright-onnx';
 import { resolveCandidates } from 'graphwright';
 
 const extractor = new GlinerExtractor({
-  tokenizerPath: 'onnx-community/gliner_small-v2.1',
-  modelPath: './models/gliner.onnx',
-  executionProvider: 'cpu',
+  modelId: 'onnx-community/gliner_small-v2.1',
   threshold: 0.5,
 });
 await extractor.initialize();
@@ -51,8 +48,7 @@ GLiNER's labels fold into graphwright's three kinds (`person` / `place` / `conce
 
 ```ts
 new GlinerExtractor({
-  tokenizerPath,
-  modelPath,
+  modelId: 'onnx-community/gliner_small-v2.1',
   labelMap: { person: 'person', company: 'place', product: 'concept' },
 });
 ```

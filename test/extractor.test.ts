@@ -10,8 +10,7 @@ const fakeInference =
 describe('GlinerExtractor with injected inference', () => {
   it('maps inference output into ExtractedEntities', async () => {
     const ex = new GlinerExtractor({
-      tokenizerPath: 'unused',
-      modelPath: 'unused',
+      modelId: 'unused',
       inference: fakeInference({
         'I saw Sarah in Tehran': [
           { spanText: 'Sarah', start: 6, end: 11, label: 'person', score: 0.9 },
@@ -28,8 +27,7 @@ describe('GlinerExtractor with injected inference', () => {
 
   it('throws if extract runs before initialize', async () => {
     const ex = new GlinerExtractor({
-      tokenizerPath: 'x',
-      modelPath: 'x',
+      modelId: 'unused',
       inference: fakeInference({}),
     });
     await expect(ex.extract('hi')).rejects.toThrow(/initialize/);
@@ -38,8 +36,7 @@ describe('GlinerExtractor with injected inference', () => {
   it('short-circuits empty text without calling inference', async () => {
     let called = false;
     const ex = new GlinerExtractor({
-      tokenizerPath: 'x',
-      modelPath: 'x',
+      modelId: 'unused',
       inference: async () => {
         called = true;
         return [[]];
@@ -53,8 +50,7 @@ describe('GlinerExtractor with injected inference', () => {
   it('passes the configured threshold and label set to inference', async () => {
     let seen: { texts: string[]; entities: string[]; threshold?: number } | null = null;
     const ex = new GlinerExtractor({
-      tokenizerPath: 'x',
-      modelPath: 'x',
+      modelId: 'unused',
       threshold: 0.33,
       inference: async (input) => {
         seen = input;

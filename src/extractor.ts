@@ -1,40 +1,52 @@
 // graphwright-onnx — the GLiNER extractor.
 //
-// A drop-in for graphwright's LLM extractor that runs a GLiNER (zero-shot
-// NER) ONNX model locally instead of calling a provider. Same output
-// type (ExtractedEntities), so a host can use it as the no-LLM fallback:
+// A drop-in for graphwright's LLM extractor that runs a zero-shot GLiNER
+// model locally instead of calling a provider. Same output type
+// (ExtractedEntities), so a host can use it as the no-LLM fallback:
 // extract → mentions (pending) → graphwright's resolveCandidates →
-// proposals. The model + tokenizer come from the host (a local .onnx
-// file plus a Hugging Face tokenizer id); nothing is bundled.
+// proposals. The default backend is `@lmoe/gliner-onnx` (Node-native,
+// onnxruntime-node under the hood); fromPretrained downloads the model +
+// tokenizer from the Hugging Face hub. Nothing is bundled.
 
 import type { ExtractedEntities } from 'graphwright';
 import type { GlinerInference, LabelMap } from './types.js';
 import { DEFAULT_LABEL_MAP, labelsFor } from './label-map.js';
 import { toExtractedEntities } from './map.js';
 
-export type ExecutionProvider = 'cpu' | 'wasm' | 'webgpu' | 'webgl';
-
 export interface GlinerExtractorConfig {
-  /** Hugging Face tokenizer id, e.g. 'onnx-community/gliner_small-v2.1'. */
-  tokenizerPath: string;
-  /** The .onnx model: a filesystem path, or the bytes. */
-  modelPath: string | Uint8Array | ArrayBufferLike;
-  /** onnxruntime execution provider. Default 'cpu' (Node). */
-  executionProvider?: ExecutionProvider;
+  /**
+   * Hugging Face model id for a GLiNER (v1 / v2.1) ONNX model, e.g.
+   * 'onnx-community/gliner_small-v2.1'. The backend downloads the model
+   * and tokenizer on first use.
+   */
+  modelId: string;
   /** Label → kind folding. Default DEFAULT_LABEL_MAP. */
   labelMap?: LabelMap;
   /** Score floor handed to GLiNER. Default 0.5. */
   threshold?: number;
   /**
-   * Inject an inference function instead of building a real GLiNER. The
-   * library uses this for tests; a host could use it to share one loaded
-   * model across extractors. When set, the `gliner` package is never
-   * imported and the model fields are ignored.
+   * Inject an inference function instead of building the default backend.
+   * The library uses this for tests; a host can use it to plug a
+   * different GLiNER runtime or share one loaded model. When set, the
+   * `@lmoe/gliner-onnx` package is never imported.
    */
   inference?: GlinerInference;
 }
 
 const DEFAULT_THRESHOLD = 0.5;
+
+// Minimal shape of `@lmoe/gliner-onnx` we depend on, declared locally so
+// the optional peer is not needed at typecheck.
+interface LmoeRuntime {
+  extractEntitiesBatch(
+    texts: string[],
+    labels: readonly string[],
+    options?: { threshold?: number },
+  ): Promise<{ text: string; label: string; start: number; end: number; score: number }[][]>;
+}
+interface LmoeModule {
+  GLiNER1ONNXRuntime: { fromPretrained(modelId: string): Promise<LmoeRuntime> };
+}
 
 export class GlinerExtractor {
   private readonly labelMap: LabelMap;
@@ -54,19 +66,28 @@ export class GlinerExtractor {
       this.infer = this.config.inference;
       return;
     }
-    // Dynamic import so the heavy gliner/onnx stack only loads when a real
-    // model is used — injected-inference callers never touch it.
-    const { Gliner } = await import('gliner');
-    const model = new Gliner({
-      tokenizerPath: this.config.tokenizerPath,
-      onnxSettings: {
-        modelPath: this.config.modelPath,
-        executionProvider: this.config.executionProvider ?? 'cpu',
-      },
-      modelType: 'gliner',
-    });
-    await model.initialize();
-    this.infer = (input) => model.inference(input);
+    // Dynamic import via a non-literal specifier: the heavy backend
+    // (transformers.js + onnxruntime) only loads when a real model is
+    // used, and as an optional peer it need not resolve at typecheck.
+    const backend = '@lmoe/gliner-onnx';
+    const mod = (await import(backend)) as unknown as LmoeModule;
+    const runtime = await mod.GLiNER1ONNXRuntime.fromPretrained(this.config.modelId);
+    this.infer = async ({ texts, entities, threshold }) => {
+      const batch = await runtime.extractEntitiesBatch(
+        texts,
+        entities,
+        threshold !== undefined ? { threshold } : undefined,
+      );
+      return batch.map((ents) =>
+        ents.map((e) => ({
+          spanText: e.text,
+          start: e.start,
+          end: e.end,
+          label: e.label,
+          score: e.score,
+        })),
+      );
+    };
   }
 
   /** Extract entities from one text into graphwright's shape. */

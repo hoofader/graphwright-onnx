@@ -42,17 +42,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
-    "gliner": "^0.0.19"
-  },
   "peerDependencies": {
-    "graphwright": "*",
-    "onnxruntime-node": "^1.19.0"
-  },
-  "peerDependenciesMeta": {
-    "onnxruntime-node": {
-      "optional": true
-    }
+    "graphwright": "*"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

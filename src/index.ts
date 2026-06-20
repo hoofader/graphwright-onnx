@@ -6,7 +6,7 @@
 // would the LLM extractor's output.
 
 export { GlinerExtractor } from './extractor.js';
-export type { ExecutionProvider, GlinerExtractorConfig } from './extractor.js';
+export type { GlinerExtractorConfig } from './extractor.js';
 export { toExtractedEntities } from './map.js';
 export { DEFAULT_LABEL_MAP, labelsFor } from './label-map.js';
 export type { GlinerEntity, GlinerInference, LabelMap } from './types.js';
