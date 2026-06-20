@@ -5,3 +5,6 @@ coverage/
 *.log
 .DS_Store
 .models/
+
+# Local-only orientation file for Claude Code sessions.
+CLAUDE.md
