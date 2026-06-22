@@ -40,7 +40,8 @@
     "prepare": "tsc -p tsconfig.build.json",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "serve": "node dist/server.js"
   },
   "peerDependencies": {
     "graphwright": "*"

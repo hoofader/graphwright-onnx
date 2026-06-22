@@ -7,6 +7,7 @@
 
 export { GlinerExtractor } from './extractor.js';
 export type { GlinerExtractorConfig } from './extractor.js';
+export { createExtractorServer, flattenSurfaces, startFromEnv } from './server.js';
 export { GlinerClassifier } from './classifier.js';
 export type { GlinerClassifierConfig } from './classifier.js';
 export { toExtractedEntities } from './map.js';

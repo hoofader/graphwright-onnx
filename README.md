@@ -55,6 +55,24 @@ new GlinerExtractor({
 
 A label absent from the map is dropped.
 
+## Serve (HTTP)
+
+A small HTTP service exposes the extractor, so a non-Node host can call it. It is how `pg_graphwright` fills its extractor seam (a SQL function `f(text) -> text[]`): run the service, then wire a SQL function that POSTs to it.
+
+```bash
+GRAPHWRIGHT_ONNX_MODEL_ID=onnx-community/gliner_small-v2.1 \
+GRAPHWRIGHT_ONNX_PORT=8787 \
+  pnpm build && pnpm serve
+```
+
+```bash
+curl -s localhost:8787/extract -H 'content-type: application/json' \
+  -d '{"text":"Sara visited Tehran"}'
+# {"surfaces":["Sara","Tehran"]}
+```
+
+One model is loaded for the process; `/extract` is stateless. `GRAPHWRIGHT_ONNX_THRESHOLD` overrides the score floor. To embed the server in your own process (sharing a loaded model, adding auth), import `createExtractorServer(extractor)`.
+
 ## Classification
 
 GLiNER2 adds zero-shot text classification alongside NER. `GlinerClassifier` scores a text against a set of candidate labels, which is how you label the relationship or connection-context a diary line is about (`family` / `work` / `romantic` / …). Attach the result to the edges graphwright proposes; the classifier proposes, the host disposes.
