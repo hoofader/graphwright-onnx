@@ -2,8 +2,12 @@
 // Gated so CI (which doesn't install the optional backend or download a
 // model) skips it. To run:
 //   pnpm add -D @lmoe/gliner-onnx
-//   GRAPHWRIGHT_ONNX_RUN=1 pnpm exec vitest run test/integration.test.ts
-// First run downloads the model + tokenizer from the Hugging Face hub.
+//   pnpm rebuild onnxruntime-node   # pnpm 11 skips its native build by default
+//   GRAPHWRIGHT_ONNX_RUN=1 ./node_modules/.bin/vitest run test/integration.test.ts
+// First run downloads the model + tokenizer from the Hugging Face hub, so
+// give it a few minutes; the GLiNER2 classifier model is the larger one.
+// (Run vitest directly: `pnpm exec` re-checks the install and trips on the
+// un-approved native build above.)
 
 import { describe, it, expect } from 'vitest';
 import { GlinerClassifier, GlinerExtractor } from '../src/index.js';
