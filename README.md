@@ -101,4 +101,4 @@ Single-label (the default) returns the best guess; pass `{ multiLabel: true, thr
 
 ## License
 
-Apache-2.0
+MIT
