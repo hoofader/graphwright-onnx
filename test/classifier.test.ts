@@ -18,7 +18,7 @@ describe('GlinerClassifier with injected classification', () => {
     ]);
   });
 
-  it('passes labels, multiLabel, and threshold through to the seam', async () => {
+  it('passes labels, multiLabel, and threshold through to the extension point', async () => {
     let seen: Parameters<GlinerClassification>[0] | null = null;
     const clf = new GlinerClassifier({
       modelId: 'unused',
@@ -53,7 +53,7 @@ describe('GlinerClassifier with injected classification', () => {
     expect(seen!.multiLabel).toBe(false);
   });
 
-  it('short-circuits empty text without calling the seam', async () => {
+  it('short-circuits empty text without calling the extension point', async () => {
     let called = false;
     const clf = new GlinerClassifier({
       modelId: 'unused',

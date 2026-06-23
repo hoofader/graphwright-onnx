@@ -10,7 +10,7 @@ It is a separate package on purpose. graphwright's core has zero runtime depende
 pnpm add graphwright-onnx graphwright @lmoe/gliner-onnx
 ```
 
-`graphwright` is a peer dependency. `@lmoe/gliner-onnx` is the default GLiNER backend (it runs in Node via onnxruntime-node); install it to use the built-in extractor, or inject your own inference and skip it. It pulls a transformers.js runtime, so it is not a dependency of this package — the default install stays light.
+`graphwright` is a peer dependency. `@lmoe/gliner-onnx` is the default GLiNER backend (it runs in Node via onnxruntime-node); install it to use the built-in extractor, or inject your own inference and skip it. It pulls a transformers.js runtime, so it is not a dependency of this package; the default install stays light.
 
 ## Model
 
@@ -18,7 +18,7 @@ GLiNER is zero-shot: you hand it labels and it scores spans against them. Point 
 
 - [onnx-community GLiNER models](https://huggingface.co/onnx-community?search_models=gliner), e.g. `onnx-community/gliner_small-v2.1`.
 
-Nothing is bundled — the model is fetched on demand.
+Nothing is bundled; the model is fetched on demand.
 
 ## Use
 
@@ -44,7 +44,7 @@ The output is `ExtractedEntities` with `candidate_id` always `null`: this is ext
 
 ### Labels
 
-GLiNER's labels fold into graphwright's three kinds (`person` / `place` / `concept`) via a `LabelMap`. The default asks for a generous synonym set (`person`, `location`, `city`, `event`, `activity`, …). Pass your own for a tighter or domain-specific vocabulary:
+GLiNER's labels fold into graphwright's three kinds (`person` / `place` / `concept`) via a `LabelMap`. The default asks for a generous synonym set (`person`, `location`, `city`, `event`, `activity`, ...). Pass your own for a tighter or domain-specific vocabulary:
 
 ```ts
 new GlinerExtractor({
@@ -57,7 +57,7 @@ A label absent from the map is dropped.
 
 ## Serve (HTTP)
 
-A small HTTP service exposes the extractor, so a non-Node host can call it. It is how `pg_graphwright` fills its extractor seam (a SQL function `f(text) -> text[]`): run the service, then wire a SQL function that POSTs to it.
+A small HTTP service exposes the extractor, so a non-Node host can call it. It is how `pg_graphwright` fills its extractor extension point (a SQL function `f(text) -> text[]`): run the service, then wire a SQL function that POSTs to it.
 
 ```bash
 GRAPHWRIGHT_ONNX_MODEL_ID=onnx-community/gliner_small-v2.1 \
@@ -75,7 +75,7 @@ One model is loaded for the process; `/extract` is stateless. `GRAPHWRIGHT_ONNX_
 
 ## Classification
 
-GLiNER2 adds zero-shot text classification alongside NER. `GlinerClassifier` scores a text against a set of candidate labels, which is how you label the relationship or connection-context a diary line is about (`family` / `work` / `romantic` / …). Attach the result to the edges graphwright proposes; the classifier proposes, the host disposes.
+GLiNER2 adds zero-shot text classification alongside NER. `GlinerClassifier` scores a text against a set of candidate labels, which is how you label the relationship or connection-context a diary line is about (`family` / `work` / `romantic` / ...). Attach the result to the edges graphwright proposes; the classifier proposes, the host disposes.
 
 It needs a GLiNER2 model (the GLiNER1 models above do not classify):
 

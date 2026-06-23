@@ -1,7 +1,7 @@
 // graphwright-onnx — a small HTTP service exposing the extractor.
 //
 // Wraps GlinerExtractor as a model service so a non-Node host can call it
-// over HTTP. In particular it fills pg_graphwright's extractor seam (a SQL
+// over HTTP. In particular it fills pg_graphwright's extractor extension point (a SQL
 // function `f(text) -> text[]`): the host wires a SQL function that POSTs
 // here and returns `surfaces`.
 //
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import type { ExtractedEntities } from 'graphwright';
 import { GlinerExtractor } from './extractor.js';
 
-/** The flat, deduplicated surface list the extractor seam expects. */
+/** The flat, deduplicated surface list the extractor extension point expects. */
 export function flattenSurfaces(entities: ExtractedEntities): string[] {
   const seen = new Set<string>();
   const out: string[] = [];

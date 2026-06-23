@@ -17,7 +17,7 @@ export interface GlinerEntity {
 }
 
 /**
- * The inference seam: text(s) + requested labels → one entity list per
+ * The inference extension point: text(s) + requested labels → one entity list per
  * text. The real backend is the `gliner` package; tests inject a fake so
  * the mapping is exercised without loading a model.
  */
@@ -41,7 +41,7 @@ export interface Classification {
 }
 
 /**
- * The classification seam (GLiNER2 only): text + candidate labels → a
+ * The classification extension point (GLiNER2 only): text + candidate labels → a
  * label→score map. With `multiLabel` the runtime returns every label
  * above `threshold`; otherwise the single best. Tests inject a fake; a
  * host can inject a shared GLiNER2 runtime so one loaded model serves
