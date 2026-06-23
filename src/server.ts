@@ -32,13 +32,31 @@ export function flattenSurfaces(entities: ExtractedEntities): string[] {
   return out;
 }
 
+// Extraction inputs are short; cap the body so a stray large payload
+// cannot exhaust process memory before parsing.
+const MAX_BODY_BYTES = 1_000_000;
+
+class BodyTooLargeError extends Error {}
+
 async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
+  let total = 0;
+  for await (const chunk of req) {
+    const buf = chunk as Buffer;
+    total += buf.length;
+    if (total > MAX_BODY_BYTES) {
+      // Throwing ends the for-await, which tears down the request stream;
+      // the handler maps this to 413.
+      throw new BodyTooLargeError();
+    }
+    chunks.push(buf);
+  }
   return Buffer.concat(chunks).toString('utf8');
 }
 
 function json(res: ServerResponse, status: number, body: unknown): void {
+  // The body-limit abort can close the socket first; never write twice.
+  if (res.writableEnded || res.destroyed) return;
   res.writeHead(status, { 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
 }
@@ -53,17 +71,38 @@ export function createExtractorServer(extractor: GlinerExtractor): Server {
           return;
         }
         if (req.method === 'POST' && req.url === '/extract') {
-          const text = (JSON.parse(await readBody(req)) as { text?: unknown }).text;
-          if (typeof text !== 'string') {
+          let body: string;
+          try {
+            body = await readBody(req);
+          } catch (err) {
+            if (err instanceof BodyTooLargeError) {
+              json(res, 413, { error: 'request body too large' });
+              return;
+            }
+            throw err;
+          }
+          let parsed: { text?: unknown };
+          try {
+            parsed = JSON.parse(body) as { text?: unknown };
+          } catch {
+            json(res, 400, { error: 'body must be valid JSON: {"text": string}' });
+            return;
+          }
+          if (typeof parsed.text !== 'string') {
             json(res, 400, { error: 'body must be {"text": string}' });
             return;
           }
-          json(res, 200, { surfaces: flattenSurfaces(await extractor.extract(text)) });
+          json(res, 200, { surfaces: flattenSurfaces(await extractor.extract(parsed.text)) });
           return;
         }
         json(res, 404, { error: 'not found' });
       } catch (err) {
-        json(res, 500, { error: err instanceof Error ? err.message : 'error' });
+        // Onnx/transformers errors can carry local file paths; keep them
+        // out of the response (and the caller's logs, e.g. Postgres). Log
+        // the detail server-side instead.
+        // eslint-disable-next-line no-console
+        console.error('graphwright-onnx /extract failed:', err);
+        json(res, 500, { error: 'extraction failed' });
       }
     })();
   });
@@ -75,17 +114,29 @@ export async function startFromEnv(): Promise<Server> {
   if (!modelId) {
     throw new Error('set GRAPHWRIGHT_ONNX_MODEL_ID to a GLiNER ONNX model id');
   }
-  const threshold = process.env.GRAPHWRIGHT_ONNX_THRESHOLD;
   const port = Number(process.env.GRAPHWRIGHT_ONNX_PORT ?? 8787);
+  // Default to loopback: the documented use is a sidecar that Postgres
+  // calls on the same host. Opt into a wider bind explicitly.
+  const host = process.env.GRAPHWRIGHT_ONNX_HOST ?? '127.0.0.1';
+  const rawThreshold = process.env.GRAPHWRIGHT_ONNX_THRESHOLD;
+  let threshold: number | undefined;
+  if (rawThreshold !== undefined) {
+    threshold = Number(rawThreshold);
+    if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
+      throw new Error(
+        `GRAPHWRIGHT_ONNX_THRESHOLD must be a number in [0, 1], got ${JSON.stringify(rawThreshold)}`,
+      );
+    }
+  }
   const extractor = new GlinerExtractor({
     modelId,
-    ...(threshold !== undefined ? { threshold: Number(threshold) } : {}),
+    ...(threshold !== undefined ? { threshold } : {}),
   });
   await extractor.initialize();
   const server = createExtractorServer(extractor);
-  await new Promise<void>((resolve) => server.listen(port, resolve));
+  await new Promise<void>((resolve) => server.listen(port, host, resolve));
   // eslint-disable-next-line no-console
-  console.log(`graphwright-onnx extractor listening on :${port} (model ${modelId})`);
+  console.log(`graphwright-onnx extractor listening on ${host}:${port} (model ${modelId})`);
   return server;
 }
 

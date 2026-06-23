@@ -70,12 +70,21 @@ export class GlinerClassifier {
 
   /** Load the model (or accept the injected classification). Call once. */
   async initialize(): Promise<void> {
+    if (this.classifyFn) return; // idempotent: a second call must not reload the model.
     if (this.config.classification) {
       this.classifyFn = this.config.classification;
       return;
     }
     const backend = '@lmoe/gliner-onnx';
-    const mod = (await import(backend)) as unknown as Lmoe2Module;
+    let mod: Lmoe2Module;
+    try {
+      mod = (await import(backend)) as unknown as Lmoe2Module;
+    } catch {
+      throw new Error(
+        `Install ${backend} to use the default GLiNER2 backend (pnpm add ${backend}), ` +
+          'or pass { classification } to plug your own runtime.',
+      );
+    }
     const runtime = await mod.GLiNER2ONNXRuntime.fromPretrained(this.config.modelId);
     this.classifyFn = ({ text, labels, multiLabel, threshold }) => {
       const options: { threshold?: number; multiLabel?: boolean } = {};
@@ -96,12 +105,16 @@ export class GlinerClassifier {
       throw new Error('GlinerClassifier.classify called before initialize()');
     }
     if (!text.trim()) return [];
-    const raw = await this.classifyFn({
+    const input: Parameters<GlinerClassification>[0] = {
       text,
       labels: this.labels,
       multiLabel: this.multiLabel,
-      threshold: this.threshold,
-    });
+    };
+    // Single-label must return the best guess regardless of score. Passing
+    // the floor in that mode can make the runtime return nothing when the
+    // top score sits below it, which contradicts the documented contract.
+    if (this.multiLabel) input.threshold = this.threshold;
+    const raw = await this.classifyFn(input);
     return toClassifications(raw);
   }
 }

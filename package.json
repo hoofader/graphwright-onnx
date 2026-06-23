@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "No-LLM entity extraction for graphwright: a GLiNER (zero-shot NER) ONNX backend that produces graphwright's ExtractedEntities. The deterministic fallback when no LLM is available.",
   "license": "MIT",
-  "author": "Hoofader",
+  "author": "Hoofader <info@hoofade.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hoofader/graphwright-onnx.git"

@@ -1,16 +1,26 @@
 # graphwright-onnx
 
-A no-LLM entity-extraction backend for [graphwright](https://github.com/hoofader/graphwright). It runs a [GLiNER](https://github.com/urchade/GLiNER) (zero-shot NER) model locally through ONNX and returns graphwright's `ExtractedEntities`, so it drops in wherever the LLM extractor would go: the deterministic fallback when there is no model provider, or when the data must not leave the machine.
+[![CI](https://github.com/hoofader/graphwright-onnx/actions/workflows/ci.yml/badge.svg)](https://github.com/hoofader/graphwright-onnx/actions/workflows/ci.yml)
 
-It is a separate package on purpose. graphwright's core has zero runtime dependencies; the model runtime (`gliner`, ONNX, a tokenizer) lives here so the core stays light.
+Entity extraction that runs entirely on your machine. No API key, no cloud call, nothing leaves the box.
+
+graphwright-onnx is a no-LLM extraction backend for [graphwright](https://github.com/hoofader/graphwright). It runs a [GLiNER](https://github.com/urchade/GLiNER) (zero-shot NER) model locally through ONNX and returns graphwright's `ExtractedEntities`, so it drops in wherever the LLM extractor would go: the deterministic fallback when there is no model provider, or when the data must not leave the machine. It also classifies relationship context (`family` / `work` / `romantic`) with GLiNER2.
+
+New to graphwright? Start with [graphwright](https://github.com/hoofader/graphwright); this package adds a local model backend for it.
+
+It is a separate package on purpose. graphwright's core has zero runtime dependencies; the model runtime (`@lmoe/gliner-onnx`, ONNX, a tokenizer) lives here so the core stays light.
 
 ## Install
 
+Not on npm yet. Install this package and its peers from the git source:
+
 ```bash
-pnpm add graphwright-onnx graphwright @lmoe/gliner-onnx
+pnpm add github:hoofader/graphwright-onnx github:hoofader/graphwright @lmoe/gliner-onnx
+# pnpm 11 skips native builds by default, so compile onnxruntime-node once:
+pnpm rebuild onnxruntime-node
 ```
 
-`graphwright` is a peer dependency. `@lmoe/gliner-onnx` is the default GLiNER backend (it runs in Node via onnxruntime-node); install it to use the built-in extractor, or inject your own inference and skip it. It pulls a transformers.js runtime, so it is not a dependency of this package; the default install stays light.
+`graphwright` is a peer dependency. `@lmoe/gliner-onnx` is the default GLiNER backend (it runs in Node via onnxruntime-node); install it to use the built-in extractor, or inject your own inference and skip it. It is an optional peer, so a missing install fails with a message that tells you what to add, not a raw module-not-found. To run the extractor as an HTTP sidecar that `pg_graphwright` calls, see [Serve](#serve-http).
 
 ## Model
 
@@ -18,7 +28,7 @@ GLiNER is zero-shot: you hand it labels and it scores spans against them. Point 
 
 - [onnx-community GLiNER models](https://huggingface.co/onnx-community?search_models=gliner), e.g. `onnx-community/gliner_small-v2.1`.
 
-Nothing is bundled; the model is fetched on demand.
+The first call to `initialize()` downloads a few hundred megabytes (model + tokenizer) and caches them locally; expect a minute or two on the first run, then the cache. GLiNER2 classification models are larger. Nothing is bundled.
 
 ## Use
 
@@ -71,7 +81,7 @@ curl -s localhost:8787/extract -H 'content-type: application/json' \
 # {"surfaces":["Sara","Tehran"]}
 ```
 
-One model is loaded for the process; `/extract` is stateless. `GRAPHWRIGHT_ONNX_THRESHOLD` overrides the score floor. To embed the server in your own process (sharing a loaded model, adding auth), import `createExtractorServer(extractor)`.
+One model is loaded for the process; `/extract` is stateless. The server binds `127.0.0.1` by default (the sidecar case); set `GRAPHWRIGHT_ONNX_HOST=0.0.0.0` to expose it more widely. `GRAPHWRIGHT_ONNX_THRESHOLD` overrides the score floor (a value in `[0, 1]`). The request body is capped at 1 MB. To embed the server in your own process (sharing a loaded model, adding auth), import `createExtractorServer(extractor)`.
 
 ## Classification
 
@@ -92,7 +102,7 @@ await clf.classify('I had coffee with my sister');
 // → [{ label: 'family', score: 0.91 }]  (ranked most likely first)
 ```
 
-Single-label (the default) returns the best guess; pass `{ multiLabel: true, threshold: 0.3 }` to get every label the model keeps above the floor. Empty text returns `[]` without loading the model. The labels are yours: `DEFAULT_CONNECTION_CONTEXTS` is only a starting point. Like the extractor, the classification step is injectable (`{ classification }`) to test without a model or to reuse one loaded GLiNER2 runtime for both NER and classification.
+Single-label (the default) returns the best guess regardless of its score; pass `{ multiLabel: true, threshold: 0.3 }` to get every label the model keeps above the floor. Empty text returns `[]` without loading the model. The labels are yours: `DEFAULT_CONNECTION_CONTEXTS` is only a starting point. Like the extractor, the classification step is injectable (`{ classification }`) to test without a model or to reuse one loaded GLiNER2 runtime for both NER and classification.
 
 ## Notes
 

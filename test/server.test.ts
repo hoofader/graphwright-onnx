@@ -62,4 +62,10 @@ describe('extractor http service', () => {
     const res = await fetch(`${base}/extract`, { method: 'POST', body: '{}' });
     expect(res.status).toBe(400);
   });
+
+  it('rejects a body that is not valid JSON with 400, not 500', async () => {
+    const base = await start();
+    const res = await fetch(`${base}/extract`, { method: 'POST', body: 'not json at all' });
+    expect(res.status).toBe(400);
+  });
 });

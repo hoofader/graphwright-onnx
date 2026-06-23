@@ -62,6 +62,7 @@ export class GlinerExtractor {
 
   /** Load the model (or accept the injected inference). Call once. */
   async initialize(): Promise<void> {
+    if (this.infer) return; // idempotent: a second call must not reload the model.
     if (this.config.inference) {
       this.infer = this.config.inference;
       return;
@@ -70,7 +71,17 @@ export class GlinerExtractor {
     // (transformers.js + onnxruntime) only loads when a real model is
     // used, and as an optional peer it need not resolve at typecheck.
     const backend = '@lmoe/gliner-onnx';
-    const mod = (await import(backend)) as unknown as LmoeModule;
+    let mod: LmoeModule;
+    try {
+      mod = (await import(backend)) as unknown as LmoeModule;
+    } catch {
+      // The optional peer is missing; a raw ERR_MODULE_NOT_FOUND from deep
+      // in the import is not actionable, so say what to do.
+      throw new Error(
+        `Install ${backend} to use the default GLiNER backend (pnpm add ${backend}), ` +
+          'or pass { inference } to plug your own runtime.',
+      );
+    }
     const runtime = await mod.GLiNER1ONNXRuntime.fromPretrained(this.config.modelId);
     this.infer = async ({ texts, entities, threshold }) => {
       const batch = await runtime.extractEntitiesBatch(
